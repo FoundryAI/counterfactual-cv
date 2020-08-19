@@ -140,3 +140,5 @@ note.md
 *.html
 *.npy
 *.csv
+
+.idea/

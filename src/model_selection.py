@@ -217,9 +217,9 @@ def estimate_metrics_on_val(data: str = 'ihdp_B') -> None:
             metrics[2, j] = plug_in(mu0=mu0, mu1=mu1, ite_pred=_preds)
             metrics[3, j] = cfcv_mse(y=Yval[i], t=Tval[i], mu0=mu0_cf, mu1=mu1_cf, ps=ps, ite_pred=_preds)
             # Insert our models here and add them to metrics
-            metrics[4, j] = mse(our_model_tau1, _preds)
-            metrics[5, j] = mse(our_model_tau2, _preds)
-            metrics[6, j] = mse(our_model_tau3, _preds)
+            metrics[4, j] = np.mean((our_model_tau1 - _preds) ** 2)
+            metrics[5, j] = np.mean((our_model_tau2 - _preds) ** 2)
+            metrics[6, j] = np.mean((our_model_tau3 - _preds) ** 2)
         metrics_list.append(metrics)
     np.save(arr=np.concatenate(metrics_list).reshape((Tval.shape[0], NUM_METRICS, NUM_META_MODELS)),
             file=f'../logs/{data}/metrics.npy')
