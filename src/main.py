@@ -85,15 +85,16 @@ if __name__ == "__main__":
     # calculate and save the evaluation performacen of metrics.
     save_results()
 
-    if alpha_list:
-        estimate_alpha_metrics_on_val(alpha_list=alpha_list)
-        save_results_alpha(alpha_list=alpha_list)
+    # WK: Not needed for our analysis
+    #if alpha_list:
+    #    estimate_alpha_metrics_on_val(alpha_list=alpha_list)
+    #    save_results_alpha(alpha_list=alpha_list)
 
-    main_tuner(iters=iters, n_trials=n_trials)  # optuna experiments
+    #main_tuner(iters=iters, n_trials=n_trials)  # optuna experiments
 
-    visualizer = Visualizer(iters=iters, alpha_list=alpha_list)
-    visualizer.plot_prediction_mse()
+    #visualizer = Visualizer(iters=iters, alpha_list=alpha_list)
+    #visualizer.plot_prediction_mse()
 
-    if alpha_list is not None:
-        visualizer.plot_rank_alpha()
-        visualizer.plot_regret_alpha()
+    #if alpha_list is not None:
+    #    visualizer.plot_rank_alpha()
+    #    visualizer.plot_regret_alpha()

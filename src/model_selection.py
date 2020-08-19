@@ -4,6 +4,8 @@ import time
 import json
 from itertools import product
 from typing import List, Optional, Tuple
+import pandas as pd
+from sklearn.metrics import mean_squared_error as mse
 
 import numpy as np
 import tensorflow as tf
@@ -11,8 +13,10 @@ from tensorflow.python.framework import ops
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingRegressor as GBR
 
+from constants import PARAMS_LENGTH
 from metrics import cfcv_mse, ipw_mse, plug_in, tau_risk, nmse
 from model import CFR, WeightedCFR
+from our_model import oneModel_Tau, twoModel_Tau, threeModel_Tau
 from visualizer import base_models, meta_models, metric_names
 
 # load pre-tuned (not yet trained) models.
@@ -74,7 +78,7 @@ def _make_val_preds(Xval: np.ndarray, Tval: np.ndarray, Yval: np.ndarray,
     """Estimate prameters of validation data."""
     tf.set_random_seed(12345)
     ops.reset_default_graph()
-    params = np.zeros((Xval.shape[0], 6))
+    params = np.zeros((Xval.shape[0], PARAMS_LENGTH))
     obs_outcome_model_ = GBR(
         n_estimators=100,
         learning_rate=best_params_gbr['eta'],
@@ -107,13 +111,19 @@ def _make_val_preds(Xval: np.ndarray, Tval: np.ndarray, Yval: np.ndarray,
     potential_outcome_model_.sess.close()
     # estimate propensity score.
     propensity_model.fit(Xval, Tval)
-    params[:, -1] = propensity_model.predict_proba(Xval)[:, 1]
+    params[:, 5] = propensity_model.predict_proba(Xval)[:, 1]
     # estimate potential outcomes for Counterfactual Cross Validation.
-    cfcv_model_.train(x=Xval, t=Tval, y=Yval, e=params[:, -1])
+    cfcv_model_.train(x=Xval, t=Tval, y=Yval, e=params[:, 5])
     mu0_preds, mu1_preds = cfcv_model_.predict(Xval)
     cfcv_model_.sess.close()
     params[:, 3] = mu0_preds
     params[:, 4] = mu1_preds
+    tau_dr, _ = oneModel_Tau(X_train=pd.DataFrame(Xval), y_train=pd.Series(Yval), t_train=Tval, X_test=pd.DataFrame(Xval), y_test=pd.Series(Yval), t_test=Tval)
+    params[:, 6] = tau_dr.to_numpy()
+    tau_dr, _ = twoModel_Tau(X_train=pd.DataFrame(Xval), y_train=pd.Series(Yval), t_train=Tval, X_test=pd.DataFrame(Xval), y_test=pd.Series(Yval), t_test=Tval)
+    params[:, 7] = tau_dr.to_numpy()
+    tau_dr, _ = threeModel_Tau(X_train=pd.DataFrame(Xval), y_train=pd.Series(Yval), t_train=Tval, X_test=pd.DataFrame(Xval), y_test=pd.Series(Yval), t_test=Tval)
+    params[:, 8] = tau_dr.to_numpy()
 
     params_alpha = None
     if alpha_list is not None:
@@ -173,7 +183,7 @@ def run_preds(data: str = 'ihdp_B', alpha_list: Optional[List[float]] = None) ->
             file=f'../logs/{data}/predictions_val.npy')
     np.save(arr=np.concatenate(preds_list_te).reshape((Xte.shape[0], Xte.shape[1], NUM_META_MODELS)),
             file=f'../logs/{data}/predictions_te.npy')
-    np.save(arr=np.concatenate(params_list).reshape((Xval.shape[0], Xval.shape[1], 6)),
+    np.save(arr=np.concatenate(params_list).reshape((Xval.shape[0], Xval.shape[1], PARAMS_LENGTH)),
             file=f'../logs/{data}/parameters.npy')
     if alpha_list is not None:
         np.save(arr=np.concatenate(params_alpha_list).reshape((Xval.shape[0], Xval.shape[1], 2 * len(alpha_list))),
@@ -196,8 +206,8 @@ def estimate_metrics_on_val(data: str = 'ihdp_B') -> None:
     Yval = np.load(f'../data/{data}/Yval.npy')
     metrics_list = []
     for i in np.arange(Tval.shape[0]):
-        mu, mu0, mu1, mu0_cf, mu1_cf, ps =\
-            params[i, :, 0], params[i, :, 1], params[i, :, 2], params[i, :, 3], params[i, :, 4], params[i, :, 5]
+        mu, mu0, mu1, mu0_cf, mu1_cf, ps, our_model_tau1, our_model_tau2, our_model_tau3  =\
+            params[i, :, 0], params[i, :, 1], params[i, :, 2], params[i, :, 3], params[i, :, 4], params[i, :, 5], params[i, :, 6], params[i, :, 7], params[i, :, 8]
         # calc metrics
         metrics = np.zeros((NUM_METRICS, NUM_META_MODELS))
         for j in np.arange(NUM_META_MODELS):
@@ -206,6 +216,10 @@ def estimate_metrics_on_val(data: str = 'ihdp_B') -> None:
             metrics[1, j] = tau_risk(y=Yval[i], t=Tval[i], ps=ps, mu=mu, ite_pred=_preds)
             metrics[2, j] = plug_in(mu0=mu0, mu1=mu1, ite_pred=_preds)
             metrics[3, j] = cfcv_mse(y=Yval[i], t=Tval[i], mu0=mu0_cf, mu1=mu1_cf, ps=ps, ite_pred=_preds)
+            # Insert our models here and add them to metrics
+            metrics[4, j] = mse(our_model_tau1, _preds)
+            metrics[5, j] = mse(our_model_tau2, _preds)
+            metrics[6, j] = mse(our_model_tau3, _preds)
         metrics_list.append(metrics)
     np.save(arr=np.concatenate(metrics_list).reshape((Tval.shape[0], NUM_METRICS, NUM_META_MODELS)),
             file=f'../logs/{data}/metrics.npy')

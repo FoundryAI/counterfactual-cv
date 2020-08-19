@@ -9,7 +9,7 @@ from plotly.offline import plot
 base_models = ['dt', 'rf', 'gbr', 'ridge', 'svm']
 meta_models = ['X', 'S', 'T', 'DA', 'DR']
 model_names = [b + '-' + a for (a, b) in product(base_models, meta_models)]
-metric_names = ['IPW', 'τ-risk', 'Plug-in', 'CF-CV']
+metric_names = ['IPW', 'τ-risk', 'Plug-in', 'CF-CV', 'MSE-Tau1', 'MSE-Tau2', 'MSE-Tau3']
 
 colors = ['rgb(31, 119, 180)', 'rgb(255, 127, 14)',
           'rgb(44, 160, 44)', 'rgb(214, 39, 40)',
