@@ -104,6 +104,7 @@ def _make_val_preds(Xval: np.ndarray, Tval: np.ndarray, Yval: np.ndarray,
     obs_outcome_model_.fit(Xval, Yval)
     params[:, 0] = obs_outcome_model_.predict(Xval)
     # estimate potential outcomes for plug-in metric.
+    print(Xval.shape, Tval.shape, Yval.shape)
     potential_outcome_model_.train(x=Xval, t=Tval, y=Yval)
     mu0_preds, mu1_preds = potential_outcome_model_.predict(Xval)
     params[:, 1] = mu0_preds

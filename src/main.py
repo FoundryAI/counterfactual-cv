@@ -9,7 +9,7 @@ from scipy.stats import spearmanr
 import tensorflow as tf
 
 from model_selection import estimate_alpha_metrics_on_val, estimate_metrics_on_val, run_preds
-from data_generator import generate_data
+from data_generator import generate_data, generating_our_data
 from param_tuner import main_tuner
 from visualizer import Visualizer, metric_names
 
@@ -78,6 +78,7 @@ if __name__ == "__main__":
     # run simulations
     # generate and preprocess semi-synthetic datasets
     generate_data(iters=iters)
+    # generating_our_data(iters=iters)
 
     # prediction by meta-learners, parameter estimation by metrics.
     run_preds(alpha_list=alpha_list)
